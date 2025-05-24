@@ -29,7 +29,7 @@ model = dict(
         use_dcn=True),
     bbox_head=dict(
         type='CenterNetHead',
-        num_classes=80,
+        num_classes=1,
         in_channels=64,
         feat_channels=64,
         loss_center_heatmap=dict(type='GaussianFocalLoss', loss_weight=1.0),
@@ -97,14 +97,25 @@ train_dataloader = dict(
         dataset=dict(
             type=dataset_type,
             data_root=data_root,
-            ann_file='annotations/instances_train2017.json',
+            ann_file='annotations/coco_wholebody_faces_train.json',
             data_prefix=dict(img='train2017/'),
             filter_cfg=dict(filter_empty_gt=True, min_size=32),
             pipeline=train_pipeline,
             backend_args={{_base_.backend_args}},
+            metainfo=dict(classes=('face',))
         )))
 
-val_dataloader = dict(dataset=dict(pipeline=test_pipeline))
+val_dataloader = dict(
+    dataset=dict(
+        type=dataset_type,
+        data_root=data_root,
+        ann_file='annotations/coco_wholebody_faces_val.json',
+        data_prefix=dict(img='val2017/'),
+        test_mode=True,
+        pipeline=test_pipeline,
+        backend_args={{_base_.backend_args}},
+        metainfo=dict(classes=('face',))
+    ))
 test_dataloader = val_dataloader
 
 # optimizer
@@ -134,3 +145,22 @@ train_cfg = dict(max_epochs=max_epochs)  # the real epoch is 28*5=140
 # USER SHOULD NOT CHANGE ITS VALUES.
 # base_batch_size = (8 GPUs) x (16 samples per GPU)
 auto_scale_lr = dict(base_batch_size=128)
+
+val_evaluator = dict(
+    ann_file=data_root + 'annotations/coco_wholebody_faces_val.json',
+    backend_args=None,
+    format_only=False,
+    metric='bbox',
+    type='CocoMetric'
+)
+
+vis_backends = [
+    dict(type='LocalVisBackend'),
+    dict(type='TensorboardVisBackend')
+]
+visualizer = dict(
+    name='visualizer',
+    type='DetLocalVisualizer',
+    vis_backends=vis_backends
+)
+work_dir = './work_dirs/centernet_r18-dcnv2_8xb16-crop512-140e_coco'
